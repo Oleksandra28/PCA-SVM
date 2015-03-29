@@ -1,9 +1,9 @@
 __author__ = 'osopova'
 
-from math import log, sqrt
+from math import sqrt
 
-from sklearn.utils import array2d, check_random_state, as_float_array, atleast2d_or_csr
-from sklearn.utils.extmath import (fast_logdet, safe_sparse_dot, randomized_svd, fast_dot)
+from sklearn.utils import array2d, as_float_array, atleast2d_or_csr
+from sklearn.utils.extmath import safe_sparse_dot
 
 from scipy import linalg
 
@@ -19,15 +19,15 @@ class SPCA():
         self.components_ = None
     #--------------------------------------------------------------------------------------------------------------
 
-    def transform(self, features_train):
-        X = features_train
-        X = atleast2d_or_csr(X)
+    def transform(self, features):
+
+        features = atleast2d_or_csr(features)
 
         if self.mean_ is not None:
-            X = X - self.mean_
+            features = features - self.mean_
 
-        X = safe_sparse_dot(X, self.components_.T)
-        return X
+        features = safe_sparse_dot(features, self.components_.T)
+        return features
     #--------------------------------------------------------------------------------------------------------------
 
     def fit(self, features_train):
