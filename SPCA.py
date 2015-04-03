@@ -26,7 +26,12 @@ class SPCA():
         if self.mean_ is not None:
             features = features - self.mean_
 
+        print 'features size : ', features.shape
+        #print features
+        print 'self.components_.T size : ', self.components_.T.shape
+        #print self.components_.T
         features = safe_sparse_dot(features, self.components_.T)
+
         return features
     #--------------------------------------------------------------------------------------------------------------
 
@@ -55,11 +60,6 @@ class SPCA():
         elif not 0 <= n_components <= n_features:
             raise ValueError("n_components=%r invalid for n_features=%d" % (n_components, n_features))
 
-        if 0 < n_components < 1.0:
-            # number of components for which the cumulated explained variance
-            # percentage is superior to the desired threshold
-            ratio_cumsum = explained_variance_ratio_.cumsum()
-            n_components = np.sum(ratio_cumsum < n_components) + 1
 
         # Compute noise covariance using Probabilistic PCA model
         # The sigma2 maximum likelihood (cf. eq. 12.46)
