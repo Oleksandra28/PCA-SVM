@@ -11,79 +11,87 @@ import numpy as np
 
 class SPCA():
 
-    def __init__(self, components_percent):
+    def __init__(self, cross_validation_percent = 0.4):
 
-        assert 0.0 <= components_percent  and components_percent <= 1.0
-        self.components_percent = components_percent
+        self.cross_validation_percent = cross_validation_percent
 
-        self.n_components = 0
+        self.variance_percent_retained = 0.99
+
+        # min number of principal components to maintain self.variance_percent_retained
+        self.k_components = 1
 
         # array of components with maximum variance
-        self.components_ = None
+        self.components = None
+
+        self.mean_ = None
+
+        self.U = None
+        self.S = None
+        self.V = None
+
+        self.U_reduce = None
     #--------------------------------------------------------------------------------------------------------------
 
     def transform(self, features):
 
         features = atleast2d_or_csr(features)
 
+        print 'features dimensions : ', features.shape
+
         if self.mean_ is not None:
             features = features - self.mean_
 
-        features = safe_sparse_dot(features, self.components_.T)
+        features = np.dot(features, self.U_reduce);
+        #features = safe_sparse_dot(features, self.components.T)
+
+        # features = np.dot(np.transpose(self.U[:, :self.k_components]), features)
+        print 'features dimensions : ', features.shape
+
+
         return features
     #--------------------------------------------------------------------------------------------------------------
 
     def fit(self, features_train):
 
-        X = features_train
-
-        X = array2d(X)
+        X = array2d(features_train)
         n_samples, n_features = X.shape
+        print 'given train features dimensions before PCA : ', features_train.shape
 
         X = as_float_array(X)
+
+        # Data preprocessing by Mean Normalization
         # Center data
         self.mean_ = np.mean(X, axis=0)
         X -= self.mean_
-        U, S, V = linalg.svd(X, full_matrices=False)
-        explained_variance_ = (S ** 2) / n_samples
-        explained_variance_ratio_ = (explained_variance_ /
-                                     explained_variance_.sum())
 
-        components_ = V / (S[:, np.newaxis] / sqrt(n_samples))
+        # Compute covariance matrix
+        cov_matrix = np.dot(np.transpose(X), X)/n_samples
+        print 'cov_matrix dimensions : ', cov_matrix.shape
+        # Compute SVD
+        U, S, V = linalg.svd(cov_matrix, full_matrices=1, compute_uv=1)
+        print 'x dimensions : ', X.shape
+        print 'U dimensions : ', U.shape
+        print 'S dimensions : ', S.shape
 
-        print 'reducing features dimensions to %d percent of given training features...' % (self.components_percent*100)
-        # number of components returned with maximum variance
-        self.n_components = len(features_train)*self.components_percent
-        print 'principal components dimensions : ', int(self.n_components)
+        # Calculate optimal k - min number of principal components to maintain 99% of variance
+        variance_retained = np.sum(S[:self.k_components]) / np.sum(S)
 
-        n_components = self.n_components
+        while variance_retained < self.variance_percent_retained:
+            self.k_components += 1
+            variance_retained = np.sum(S[:self.k_components]) / np.sum(S)
 
-        if n_components is None:
-            n_components = n_features
-        elif not 0 <= n_components <= n_features:
-            raise ValueError("n_components=%r invalid for n_features=%d" % (n_components, n_features))
+        if self.k_components is None:
+            self.k_components = n_features
+        elif not 0 <= self.k_components <= n_features:
+            raise ValueError("n_components=%r invalid for n_features=%d" % (self.k_components, n_features))
 
-        if 0 < n_components < 1.0:
-            # number of components for which the cumulated explained variance
-            # percentage is superior to the desired threshold
-            ratio_cumsum = explained_variance_ratio_.cumsum()
-            n_components = np.sum(ratio_cumsum < n_components) + 1
+        self.components = U
 
-        # Compute noise covariance using Probabilistic PCA model
-        # The sigma2 maximum likelihood (cf. eq. 12.46)
-        if n_components < n_features:
-            self.noise_variance_ = explained_variance_[n_components:].mean()
-        else:
-            self.noise_variance_ = 0.
+        self.U_reduce = U[:, :self.k_components]
 
-        # store n_samples to revert whitening when getting covariance
-        self.n_samples_ = n_samples
-
-        self.components_ = components_[:n_components]
-        #self.explained_variance_ = explained_variance_[:n_components]
-        #explained_variance_ratio_ = explained_variance_ratio_[:n_components]
-        #self.explained_variance_ratio_ = explained_variance_ratio_
-        self.n_components_ = n_components
+        self.U = U
+        self.S = S
+        self.V = V
 
         return (U, S, V)
     #--------------------------------------------------------------------------------------------------------------
