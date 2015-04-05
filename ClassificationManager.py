@@ -7,11 +7,11 @@ from sklearn.metrics import accuracy_score
 
 class ClassificationManager():
 
-    def __init__(self, dataset, classifier, initial_components_percent = 0.15, initial_crossvalidation_percent = 0.25):
+    def __init__(self, dataset, classifier, components_percent = 0.15, crossvalidation_percent = 0.2, test_percent = 0.2):
 
-        self.componentsPercent = initial_components_percent
-        self.crossValidationPercent = initial_crossvalidation_percent
-
+        self.components_percent = components_percent
+        self.crossvalidation_percent = crossvalidation_percent
+        self.test_percent = test_percent
         self.classifier = classifier
 
         self.data_set = dataset
@@ -25,11 +25,19 @@ class ClassificationManager():
         print 'initial features dimensions : ', features
         labels = dataset.target
 
-        features_train, features_test, labels_train, labels_test = train_test_split(self.data, labels, test_size = self.crossValidationPercent)
+        features_train, features_test, labels_train, labels_test = train_test_split(self.data, labels, test_size = self.test_percent)
 
-        principal_components = len(features_train)*initial_components_percent
+        # TODO move this to classifier fit
+        # save crossvalidation part of the dataset
+        # features_train_len = len(features_train)
+        # labels_train_len = len(labels_train)
+        #
+        # features_crossvalidation = features_train[:features_train_len*self.crossvalidation_percent]
+        # labels_crossvalidation = labels_train[:labels_train_len*self.crossvalidation_percent]
+        # features_train = features_train - features_crossvalidation
+        # labels_train = labels_crossvalidation - labels_crossvalidation
 
-        self.pca =  SPCA(principal_components)
+        self.pca =  SPCA(self.components_percent)
         self.pca.fit(features_train)
 
         print 'train features dimensions before PCA : ', features_train.shape
@@ -41,6 +49,7 @@ class ClassificationManager():
         print 'test features dimensions before PCA : ', features_test.shape
         features_test_PCA = self.pca.transform(features_test)
         print 'test features dimensions after PCA : ', features_test_PCA.shape
+
         self.classifier.fit(features_train_PCA, labels_train)
         prediction = self.classifier.predict(features_test_PCA)
         self.accuracy = accuracy_score(prediction, labels_test)

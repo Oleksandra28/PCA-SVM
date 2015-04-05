@@ -11,9 +11,12 @@ import numpy as np
 
 class SPCA():
 
-    def __init__(self, components):
-        # number of components returned with maximum variance
-        self.n_components = components
+    def __init__(self, components_percent):
+
+        assert 0.0 <= components_percent  and components_percent <= 1.0
+        self.components_percent = components_percent
+
+        self.n_components = 0
 
         # array of components with maximum variance
         self.components_ = None
@@ -47,6 +50,11 @@ class SPCA():
                                      explained_variance_.sum())
 
         components_ = V / (S[:, np.newaxis] / sqrt(n_samples))
+
+        print 'reducing features dimensions to %d percent of given training features...' % (self.components_percent*100)
+        # number of components returned with maximum variance
+        self.n_components = len(features_train)*self.components_percent
+        print 'principal components dimensions : ', int(self.n_components)
 
         n_components = self.n_components
 
